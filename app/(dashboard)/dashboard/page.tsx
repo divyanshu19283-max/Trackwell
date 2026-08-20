@@ -65,8 +65,7 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        <StatCard label="Revenue (delivered)" value={formatCurrency(delivered._sum.finalCost?.toString())} />
-        <StatCard label="Pending estimated revenue" value={formatCurrency(pending._sum.estimatedCost?.toString())} />
+
       </div>
 
       <DashboardCharts statusData={chartData} />
