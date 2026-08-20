@@ -6,7 +6,8 @@ import { sendPasswordResetEmail } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
-const TOKEN_TTL_MS = 60 * 60 * 1000;
+const TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour
+
 // Always returns the same generic message whether or not the email exists,
 // so this endpoint can't be used to enumerate registered accounts.
 const GENERIC_MESSAGE =
@@ -14,6 +15,7 @@ const GENERIC_MESSAGE =
 
 export async function POST(req: Request) {
   let body: unknown;
+
   try {
     body = await req.json();
   } catch {
@@ -21,16 +23,21 @@ export async function POST(req: Request) {
   }
 
   const parsed = forgotPasswordSchema.safeParse(body);
+
   if (!parsed.success) {
-    return apiError(parsed.error.errors[0]?.message || "Invalid input.");
+    return apiError(
+      parsed.error.errors[0]?.message || "Invalid input."
+    );
   }
+
   const normalizedEmail = parsed.data.email.trim().toLowerCase();
 
   try {
-    const user = await db.user.findUnique({ where: { email: normalizedEmail } });
+    const user = await db.user.findUnique({
+      where: { email: normalizedEmail },
+    });
 
-    // Only do the (more expensive) token + email work if a matching, active
-    // user actually exists — but the HTTP response is identical either way.
+    // Only create a reset token for an existing active user.
     if (user && user.isActive) {
       const token = generateResetToken();
       const tokenHash = hashResetToken(token);
@@ -43,16 +50,26 @@ export async function POST(req: Request) {
         },
       });
 
-      const appUrl = process.env.APP_URL || "http://localhost:3000";
-      const resetUrl = `${appUrl}/reset-password?token=${token}`;
-      await sendPasswordResetEmail(user.email, resetUrl);
+      const appUrl =
+        process.env.APP_URL || "http://localhost:3000";
+
+      const resetUrl =
+        `${appUrl}/reset-password?token=${token}`;
+
+      await sendPasswordResetEmail(
+        user.email,
+        resetUrl
+      );
     }
 
-    return apiOk({ message: GENERIC_MESSAGE });
+    return apiOk({
+      message: GENERIC_MESSAGE,
+    });
   } catch (err) {
-    // Even on an unexpected error, don't leak anything more specific than
-    // the generic message — but do log it so it's actionable server-side.
     console.error("[forgot-password]", err);
-    return apiOk({ message: GENERIC_MESSAGE });
+
+    return apiOk({
+      message: GENERIC_MESSAGE,
+    });
   }
 }
