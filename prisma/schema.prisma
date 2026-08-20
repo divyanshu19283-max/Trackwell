@@ -1,0 +1,147 @@
+// Trakwell — multi-tenant repair & service ticket management
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  STAFF
+}
+
+enum TicketStatus {
+  RECEIVED
+  DIAGNOSING
+  WAITING_FOR_PARTS
+  REPAIRING
+  READY
+  DELIVERED
+  CANCELLED
+}
+
+enum Priority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+model Business {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  email     String
+  phone     String?
+  address   String?
+  logo      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users     User[]
+  customers Customer[]
+  tickets   Ticket[]
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(STAFF)
+  isActive     Boolean  @default(true)
+  businessId   String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  business        Business        @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  ticketActivity  TicketActivity[]
+  passwordResets  PasswordReset[]
+
+  @@index([businessId])
+}
+
+model PasswordReset {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Customer {
+  id         String    @id @default(cuid())
+  businessId String
+  name       String
+  phone      String
+  email      String?
+  address    String?
+  notes      String?
+  deletedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  tickets  Ticket[]
+
+  @@index([businessId])
+  @@index([businessId, phone])
+  @@index([businessId, name])
+}
+
+model Ticket {
+  id                 String       @id @default(cuid())
+  businessId         String
+  customerId         String
+  ticketNumber       String
+  deviceName         String
+  deviceModel        String?
+  serialNumber       String?
+  problem            String
+  diagnosis          String?
+  technicianNotes    String?
+  estimatedCost      Decimal?     @db.Decimal(10, 2)
+  finalCost          Decimal?     @db.Decimal(10, 2)
+  status             TicketStatus @default(RECEIVED)
+  priority           Priority     @default(NORMAL)
+  expectedCompletion DateTime?
+  trackingToken      String       @unique
+  deletedAt          DateTime?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  completedAt        DateTime?
+  deliveredAt        DateTime?
+
+  business Business         @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  customer Customer         @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  activity TicketActivity[]
+
+  @@unique([businessId, ticketNumber])
+  @@index([businessId, status])
+  @@index([businessId, createdAt])
+  @@index([customerId])
+}
+
+model TicketActivity {
+  id        String   @id @default(cuid())
+  ticketId  String
+  userId    String?
+  action    String
+  oldValue  String?
+  newValue  String?
+  createdAt DateTime @default(now())
+
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user   User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([ticketId])
+}

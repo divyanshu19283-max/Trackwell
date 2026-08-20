@@ -1,0 +1,12 @@
+node_modules/
+.next/
+.env
+.env.local
+*.log
+/prisma/dev.db
+/coverage
+.env
+.env.local
+.env*.local
+node_modules
+.next
