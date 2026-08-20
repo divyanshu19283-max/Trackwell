@@ -4,8 +4,9 @@ import { forgotPasswordSchema } from "@/lib/validation";
 import { apiError, apiOk } from "@/lib/utils";
 import { sendPasswordResetEmail } from "@/lib/email";
 
-const TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour
+export const dynamic = "force-dynamic";
 
+const TOKEN_TTL_MS = 60 * 60 * 1000;
 // Always returns the same generic message whether or not the email exists,
 // so this endpoint can't be used to enumerate registered accounts.
 const GENERIC_MESSAGE =
